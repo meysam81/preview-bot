@@ -29,6 +29,9 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
+	showHelp := flag.Bool("help", false, "Show help message")
+	flag.BoolVar(showHelp, "h", false, "Show help message (shorthand)")
+
 	if len(args) < 1 {
 		fmt.Println("Usage: go run main.go <repo>")
 		fmt.Println()
@@ -44,6 +47,11 @@ func main() {
 		fmt.Println("  DEBUG           Set to 'true' to enable debug output. Default is 'false'.")
 		fmt.Println("  GITHUB_TOKEN    GitHub API token with repo permissions.")
 		os.Exit(1)
+	}
+
+	if *showHelp {
+		flag.Usage()
+		os.Exit(0)
 	}
 
 	repo := args[0]
