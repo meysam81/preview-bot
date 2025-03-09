@@ -71,7 +71,8 @@ jobs:
           DOCKER_USERNAME: ${{ github.actor }}
           DOCKER_PASSWORD: ${{ github.token }}
         run: bunx semantic-release@v24
-      - name: Build docker
+      - if: steps.semantic-release.outputs.version != ''
+        name: Build docker
         uses: meysam81/build-docker@main
         with:
           cosign: true
