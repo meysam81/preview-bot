@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
-	"os/exec"
 	"strings"
+	"time"
 )
 
 type Comment struct {
@@ -39,6 +42,7 @@ func main() {
 		fmt.Println("  TITLE           The comment title. Default is '# Preview Deployment'.")
 		fmt.Println("  ASSETS_DIR      Where to look for static assets. Default is '/'.")
 		fmt.Println("  DEBUG           Set to 'true' to enable debug output. Default is 'false'.")
+		fmt.Println("  GITHUB_TOKEN    GitHub API token with repo permissions.")
 		os.Exit(1)
 	}
 
@@ -64,6 +68,11 @@ func main() {
 		log.Fatal("URL environment variable is required")
 	}
 
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		log.Fatal("GITHUB_TOKEN environment variable is required")
+	}
+
 	title := os.Getenv("TITLE")
 	if title == "" {
 		title = "# Preview Deployment"
@@ -83,9 +92,13 @@ func main() {
 		log.Printf("Assets Dir: %s\n", assetsDir)
 	}
 
-	commentTemplatePath := assetsDir + "/preview-body.json.tpl"
+	commentTemplatePath := assetsDir + "/preview-body.md.tpl"
 
-	comments, err := getComments(repo, prNumber)
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	comments, err := getComments(httpClient, repo, prNumber, githubToken)
 	if err != nil {
 		log.Fatalf("Failed to get comments: %v", err)
 	}
@@ -107,35 +120,50 @@ func main() {
 	}
 
 	for _, commentURL := range commentURLs {
-		if err := deleteComment(commentURL); err != nil {
+		if err := deleteComment(httpClient, commentURL, githubToken); err != nil {
 			log.Printf("Warning: Failed to delete comment %s: %v", commentURL, err)
 		}
 	}
 
-	if err := createComment(repo, prNumber, commentBody); err != nil {
+	if err := createComment(httpClient, repo, prNumber, commentBody, githubToken); err != nil {
 		log.Fatalf("Failed to create comment: %v", err)
 	}
 }
 
-func getComments(repo, prNumber string) ([]Comment, error) {
+func getComments(client *http.Client, repo, prNumber, token string) ([]Comment, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/issues/%s/comments", repo, prNumber)
 
-	cmd := exec.Command("gh", "api",
-		"-HX-GitHub-Api-Version:2022-11-28",
-		"-Haccept:application/vnd.github.raw+json",
-		url)
-
-	output, err := cmd.Output()
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("gh api command failed: %v", err)
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
-	if string(output) == "[]" {
+	req.Header.Set("Accept", "application/vnd.github.raw+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, body)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	if string(body) == "[]" {
 		return []Comment{}, nil
 	}
 
 	var comments []Comment
-	if err := json.Unmarshal(output, &comments); err != nil {
+	if err := json.Unmarshal(body, &comments); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal comments: %v", err)
 	}
 
@@ -156,21 +184,31 @@ func processTemplate(templatePath string, replacements map[string]string) (strin
 	return result, nil
 }
 
-func deleteComment(commentURL string) error {
-	cmd := exec.Command("gh", "api",
-		"-HX-GitHub-Api-Version:2022-11-28",
-		"-Haccept:application/vnd.github.raw+json",
-		"-XDELETE",
-		commentURL)
+func deleteComment(client *http.Client, commentURL, token string) error {
+	req, err := http.NewRequest("DELETE", commentURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("gh api delete command failed: %v", err)
+	req.Header.Set("Accept", "application/vnd.github.raw+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("HTTP request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, body)
 	}
 
 	return nil
 }
 
-func createComment(repo, prNumber, body string) error {
+func createComment(client *http.Client, repo, prNumber, body, token string) error {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/issues/%s/comments", repo, prNumber)
 
 	newComment := NewComment{Body: body}
@@ -179,29 +217,25 @@ func createComment(repo, prNumber, body string) error {
 		return fmt.Errorf("failed to marshal comment data: %v", err)
 	}
 
-	tempFile, err := os.CreateTemp("", "comment-")
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(commentData))
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %v", err)
-	}
-	defer os.Remove(tempFile.Name())
-
-	if _, err := tempFile.Write(commentData); err != nil {
-		return fmt.Errorf("failed to write to temp file: %v", err)
-	}
-	if err := tempFile.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %v", err)
+		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	cmd := exec.Command("gh", "api",
-		"-HX-GitHub-Api-Version:2022-11-28",
-		"-Haccept:application/vnd.github.raw+json",
-		"-XPOST",
-		url,
-		"--input",
-		tempFile.Name())
+	req.Header.Set("Accept", "application/vnd.github.raw+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("gh api post command failed: %v", err)
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("HTTP request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, body)
 	}
 
 	return nil
