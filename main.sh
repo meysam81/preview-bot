@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-set -eu
+set -u
 
 if [ $# -lt 1 ]; then
   echo "Usage: $0 <repo>"
