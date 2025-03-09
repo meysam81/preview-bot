@@ -14,5 +14,6 @@ FROM scratch AS final
 ENV GIN_MODE=release
 
 COPY --from=builder /app/preview-bot /preview-bot
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
 ENTRYPOINT ["/preview-bot"]
