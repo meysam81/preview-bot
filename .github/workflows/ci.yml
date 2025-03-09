@@ -15,6 +15,22 @@ permissions:
   security-events: write
 
 jobs:
+  build-edge:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build docker
+        uses: meysam81/build-docker@main
+        with:
+          cosign: true
+          image-name: ghcr.io/${{ github.repository }}
+          image-extra-tags: |
+            ghcr.io/${{ github.repository }}:${{ github.run_id }}
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+          kubescape: true
+          kubescape-upload-sarif: true
+
   build-pr:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -48,9 +64,17 @@ jobs:
           bun-version: latest
       - name: Install bun deps
         run: bun install
-      - name: Release
+      - id: semantic-release
+        name: Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DOCKER_USERNAME: ${{ github.actor }}
           DOCKER_PASSWORD: ${{ github.token }}
         run: bunx semantic-release-plus@v20
+      - name: Build docker
+        uses: meysam81/build-docker@main
+        with:
+          cosign: true
+          image-name: ghcr.io/${{ github.repository }}
+          image-extra-tags: ghcr.io/${{ github.repository }}:${{ steps.semantic-release.outputs.version }}
+          kubescape: true
