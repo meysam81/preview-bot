@@ -1,3 +1,5 @@
 *
-!main.sh
-!*.json.tpl
+!go.mod
+!go.sum
+!vendor
+!*.go
