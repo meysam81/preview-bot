@@ -14,7 +14,7 @@ plugins:
   - "@semantic-release/changelog"
   - "@semantic-release/github"
   - - "@semantic-release-plus/docker"
-    - name:
-        registry: ghcr.io
-        namespace: meysam81
-        repository: preview-bot
+    - name: ghcr.io/meysam81/preview-bot:latest
+      registry: ghcr.io
+      namespace: meysam81
+      repository: preview-bot
