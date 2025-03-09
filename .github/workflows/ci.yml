@@ -44,31 +44,29 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.event.pull_request.head.sha }}
           kubescape: true
 
-  release-please:
+  semantic-release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    outputs:
-      releases_created: ${{ steps.release-please.outputs.releases_created }}
-      tag_name: ${{ steps.release-please.outputs.tag_name }}
     permissions:
       contents: write
+      packages: write
+      issues: write
       pull-requests: write
+      id-token: write
     steps:
-      - id: release-please
-        name: Release please
-        uses: googleapis/release-please-action@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          release-type: simple
-
-  build-stable:
-    needs: release-please
-    if: needs.release-please.outputs.releases_created == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Build docker
-        uses: meysam81/build-docker@main
+          fetch-depth: 0
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
         with:
-          cosign: true
-          image-name: ghcr.io/${{ github.repository }}
-          image-extra-tags: ghcr.io/${{ github.repository }}:${{ needs.release-please.outputs.tag_name }}
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          bun-version: latest
+      - name: Install bun deps
+        run: bun install
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DOCKER_USERNAME: ${{ github.actor }}
+          DOCKER_PASSWORD: ${{ github.token }}
+        run: bunx semantic-release-plus@v20
