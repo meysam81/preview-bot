@@ -22,10 +22,12 @@ This project provides a simple Go application that:
 - Removes previous preview comments when updated
 - Uses customizable templates for comment formatting
 
-[![Preview Bot Comment](./assets/preview-bot-comment.png)](https://github.com/meysam81/preview-bot)
-
 Designed to run within Kuberntes Pods to provide stakeholders with easy access
 to deployment previews for each PR.
+
+## Demo
+
+[![Preview Bot Comment](./assets/preview-bot-comment.png)](https://github.com/meysam81/preview-bot)
 
 ## Quickstart
 
