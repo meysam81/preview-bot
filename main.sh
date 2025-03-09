@@ -51,7 +51,14 @@ process_template() {
     echo "$result"
 }
 
-comments_url=$(gh_api "/repos/$repo/issues/$PR_NUMBER/comments" | jq -r --arg title "$title" --arg user_login "$USER_LOGIN" '.[] | select((.body | startswith($title)) and (.user.login == $user_login)) | .url' | tr '\n' ' ' | sed 's/ $//')
+comments_url=$(gh_api "/repos/$repo/issues/$PR_NUMBER/comments" | \
+  jq -r --arg title "$title" --arg user_login "$USER_LOGIN" \
+  'if . == null or . == [] then
+    empty
+   else
+    .[] | select((.body != null) and (.body | startswith($title)) and (.user.login == $user_login)) | .url
+   end' | \
+  tr '\n' ' ' | sed 's/ $//')
 
 new_comment_file=$(mktemp)
 process_template "$comment_file" TITLE="$title" COMMIT_SHA="$COMMIT_SHA" URL="$URL" > "$new_comment_file"
