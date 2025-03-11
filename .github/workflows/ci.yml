@@ -65,7 +65,7 @@ jobs:
       - name: Install bun deps
         run: bun install
       - name: Install goreleaser
-        run: curl -sfL https://goreleaser.com/static/run | bash VERSION=v2.7.0
+        run: curl -sfL https://goreleaser.com/static/run | bash VERSION=v2.7.0 -s
       - id: semantic-release
         name: Release
         env:
