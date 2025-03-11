@@ -67,7 +67,7 @@ jobs:
       - name: Install syft
         uses: anchore/sbom-action/download-syft@v0
       - name: Install goreleaser
-        run: curl -sfL https://goreleaser.com/static/run | bash VERSION=v2.7.0 -s
+        run: go install github.com/goreleaser/goreleaser/v2@latest
       - id: semantic-release
         name: Release
         env:
