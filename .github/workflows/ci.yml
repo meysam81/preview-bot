@@ -73,7 +73,8 @@ jobs:
         run: |
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt update
-          sudo apt install goreleaser          goreleaser --version
+          sudo apt install goreleaser
+          goreleaser --version
       - id: semantic-release
         name: Release
         env:
