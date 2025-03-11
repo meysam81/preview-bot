@@ -1,3 +1,10 @@
+## [1.1.6](https://github.com/meysam81/preview-bot/compare/v1.1.5...v1.1.6) (2025-03-11)
+
+
+### Bug Fixes
+
+* add the missing blank line ([87e941a](https://github.com/meysam81/preview-bot/commit/87e941a38d44d0d955426dc0a926e95d37d03327))
+
 ## [1.1.5](https://github.com/meysam81/preview-bot/compare/v1.1.4...v1.1.5) (2025-03-11)
 
 
