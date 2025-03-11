@@ -67,7 +67,9 @@ jobs:
       - name: Install syft
         uses: anchore/sbom-action/download-syft@v0
       - name: Install goreleaser
-        run: go install github.com/goreleaser/goreleaser/v2@latest
+        run: |
+          go install github.com/goreleaser/goreleaser/v2@latest
+          echo "export PATH=$PATH:$HOME/go/bin" >> "$GITHUB_ENV"
       - id: semantic-release
         name: Release
         env:
