@@ -70,11 +70,10 @@ jobs:
       - name: Setup Cosign CLI
         uses: sigstore/cosign-installer@v3
       - name: Install goreleaser
-        env:
-          VERSION: v2.7.0
         run: |
-          curl -sfL https://goreleaser.com/static/run | bash -s -- check
-          goreleaser --version
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt update
+          sudo apt install goreleaser          goreleaser --version
       - id: semantic-release
         name: Release
         env:
