@@ -64,6 +64,8 @@ jobs:
           bun-version: latest
       - name: Install bun deps
         run: bun install
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0
       - name: Install goreleaser
         run: curl -sfL https://goreleaser.com/static/run | bash VERSION=v2.7.0 -s
       - id: semantic-release
