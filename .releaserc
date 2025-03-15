@@ -12,3 +12,6 @@ plugins:
   - "@semantic-release/github"
   - - "@semantic-release/exec"
     - successCmd: echo version=v${nextRelease.version} >> $GITHUB_OUTPUT
+      publishCmd: |
+        echo "${nextRelease.notes}" > /tmp/release-notes.md
+        goreleaser release --release-notes /tmp/release-notes.md --clean
