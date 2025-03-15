@@ -73,14 +73,12 @@ jobs:
         run: |
           echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
           sudo apt update
-          sudo apt install goreleaser
+          sudo apt install -y goreleaser
           goreleaser --version
       - id: semantic-release
         name: Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          DOCKER_USERNAME: ${{ github.actor }}
-          DOCKER_PASSWORD: ${{ github.token }}
         run: bunx semantic-release@v24
       - if: steps.semantic-release.outputs.version != ''
         name: Build docker

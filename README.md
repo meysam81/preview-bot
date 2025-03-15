@@ -1,5 +1,7 @@
 # GitHub PR Preview Bot
 
+[![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://developer.mend.io/github/meysam81/preview-bot)
+
 A lightweight tool that automatically comments on GitHub Pull Requests with deployment preview links.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
