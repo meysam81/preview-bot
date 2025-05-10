@@ -44,6 +44,23 @@ func (m *ModeFlag) Set(value string) error {
 	m.value = value
 	return nil
 }
+
+type FilePath struct {
+	value string
+}
+
+func (f *FilePath) String() string {
+	return f.value
+}
+
+func (f *FilePath) Set(value string) error {
+	if _, err := os.Stat(value); os.IsNotExist(err) {
+		return fmt.Errorf("file does not exist: %s", value)
+	}
+	f.value = value
+	return nil
+}
+
 func main() {
 	showHelp := flag.Bool("help", false, "Show help message")
 	flag.BoolVar(showHelp, "h", false, "Show help message (shorthand)")
@@ -51,6 +68,10 @@ func main() {
 	var mode ModeFlag
 	flag.Var(&mode, "m", "Operation mode: comment or delete-all")
 	flag.Var(&mode, "mode", "Operation mode: comment or delete-all")
+
+	var filepath FilePath
+	flag.Var(&filepath, "f", "Path to the static non-template file")
+	flag.Var(&filepath, "file", "Path to the static non-template file (shorthand)")
 
 	flag.Parse()
 	args := flag.Args()
@@ -60,6 +81,7 @@ func main() {
 		fmt.Println()
 		fmt.Println("Arguments:")
 		fmt.Println("  -m, --mode <mode>  The mode of operation: comment or delete-all.")
+		fmt.Println("  -f, --file <path>  Path to the static non-template file. Causes to ignore the template env vars.")
 		fmt.Println("  <repo>             The repository name in the format 'owner/repo'.")
 		fmt.Println("Environment variables:")
 		fmt.Println("  PR_NUMBER          The pull request number to comment on.")
@@ -75,7 +97,8 @@ func main() {
 	repo := args[0]
 
 	if mode.String() == "" {
-		log.Fatal("Mode is required. Use -m or --mode to specify the mode.")
+		fmt.Println("No mode specified. Defaulting to 'comment'.")
+		mode.Set("comment")
 	}
 
 	prNumber := os.Getenv("PR_NUMBER")
@@ -88,24 +111,25 @@ func main() {
 		log.Fatal("USER_LOGIN environment variable is required")
 	}
 
-	commitSha := os.Getenv("COMMIT_SHA")
-	if commitSha == "" {
-		log.Fatal("COMMIT_SHA environment variable is required")
-	}
-
-	url := os.Getenv("URL")
-	if url == "" {
-		log.Fatal("URL environment variable is required")
-	}
-
 	githubToken := os.Getenv("GITHUB_TOKEN")
 	if githubToken == "" {
 		log.Fatal("GITHUB_TOKEN environment variable is required")
 	}
 
+	// template vars
 	title := os.Getenv("TITLE")
-	if title == "" {
+	if title == "" && filepath.String() == "" {
 		title = "# Preview Deployment"
+	}
+
+	url := os.Getenv("URL")
+	if url == "" && filepath.String() == "" {
+		log.Fatal("URL environment variable is required")
+	}
+
+	commitSha := os.Getenv("COMMIT_SHA")
+	if commitSha == "" && filepath.String() == "" {
+		log.Fatal("COMMIT_SHA environment variable is required")
 	}
 
 	assetsDir := os.Getenv("ASSETS_DIR")
@@ -122,8 +146,6 @@ func main() {
 		log.Printf("Assets Dir: %s\n", assetsDir)
 	}
 
-	commentTemplatePath := assetsDir + "/preview-body.md.tpl"
-
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -137,8 +159,14 @@ func main() {
 
 	var commentURLs []string
 	for _, comment := range comments {
-		if strings.HasPrefix(comment.Body, title) && comment.User.Login == userLogin {
+		if comment.User.Login == userLogin {
 			commentURLs = append(commentURLs, comment.URL)
+		}
+	}
+
+	for _, commentURL := range commentURLs {
+		if err := deleteComment(httpClient, commentURL, githubToken); err != nil {
+			log.Printf("Warning: Failed to delete comment %s: %v", commentURL, err)
 		}
 	}
 
@@ -149,19 +177,23 @@ func main() {
 
 	fmt.Println("Creating new comment...")
 
-	commentBody, err := processTemplate(commentTemplatePath, map[string]string{
-		"TITLE":      title,
-		"COMMIT_SHA": commitSha,
-		"URL":        url,
-	})
-	if err != nil {
-		log.Fatalf("Failed to process template: %v", err)
-	}
-
-	for _, commentURL := range commentURLs {
-		if err := deleteComment(httpClient, commentURL, githubToken); err != nil {
-			log.Printf("Warning: Failed to delete comment %s: %v", commentURL, err)
+	var commentBody string
+	if filepath.String() == "" {
+		commentTemplatePath := assetsDir + "/preview-body.md.tpl"
+		commentBody, err = processTemplate(commentTemplatePath, map[string]string{
+			"TITLE":      title,
+			"COMMIT_SHA": commitSha,
+			"URL":        url,
+		})
+		if err != nil {
+			log.Fatalf("Failed to process template: %v", err)
 		}
+	} else {
+		fileContent, err := os.ReadFile(filepath.String())
+		if err != nil {
+			log.Fatalf("Failed to read file: %v", err)
+		}
+		commentBody = string(fileContent)
 	}
 
 	if err := createComment(httpClient, repo, prNumber, commentBody, githubToken); err != nil {
