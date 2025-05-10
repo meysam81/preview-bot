@@ -61,6 +61,15 @@ func (f *FilePath) Set(value string) error {
 	return nil
 }
 
+func validateEnvs(requiredEnvs []string) (missingEnvs []string) {
+	for _, env := range requiredEnvs {
+		if os.Getenv(env) == "" {
+			missingEnvs = append(missingEnvs, fmt.Sprintf("%s environment variable is required", env))
+		}
+	}
+	return
+}
+
 func main() {
 	showHelp := flag.Bool("help", false, "Show help message")
 	flag.BoolVar(showHelp, "h", false, "Show help message (shorthand)")
@@ -85,55 +94,60 @@ func main() {
 		fmt.Println("  <repo>             The repository name in the format 'owner/repo'.")
 		fmt.Println("Environment variables:")
 		fmt.Println("  PR_NUMBER          The pull request number to comment on.")
-		fmt.Println("  USER_LOGIN         The GitHub user login.")
-		fmt.Println("  COMMIT_SHA         The commit SHA.")
-		fmt.Println("  URL                The deployment URL.")
-		fmt.Println("  TITLE              The comment title. Default is '# Preview Deployment'.")
-		fmt.Println("  ASSETS_DIR         Where to look for static assets. Default is '/'.")
-		fmt.Println("  DEBUG              Set to 'true' to enable debug output. Default is 'false'.")
 		fmt.Println("  GITHUB_TOKEN       GitHub API token with repo permissions.")
+		fmt.Println("  USER_LOGIN         The GitHub user login.")
+		fmt.Println("")
+		fmt.Println("  DEBUG              Set to 'true' to enable debug output. Default is 'false'.")
+		fmt.Println("")
+		fmt.Println("  ASSETS_DIR         Where to look for static assets. Default is '/'.")
+		fmt.Println("  COMMIT_SHA         The commit SHA.")
+		fmt.Println("  TITLE              The comment title. Default is '# Preview Deployment'.")
+		fmt.Println("  URL                The deployment URL.")
 		os.Exit(0)
 	}
 	repo := args[0]
+	debug := os.Getenv("DEBUG") == "true"
 
 	if mode.String() == "" {
 		fmt.Println("No mode specified. Defaulting to 'comment'.")
 		mode.Set("comment")
 	}
 
+	missingEnvs := []string{""}
+
+	switch mode.String() {
+	case "", "comment":
+		fmt.Println("Mode set to 'comment'.")
+		var requiredEnvs []string
+		if filepath.String() == "" {
+			requiredEnvs = []string{"PR_NUMBER", "USER_LOGIN", "GITHUB_TOKEN", "TITLE", "URL", "COMMIT_SHA"}
+		} else {
+			requiredEnvs = []string{"PR_NUMBER", "USER_LOGIN", "GITHUB_TOKEN"}
+		}
+		missingEnvs = append(missingEnvs, validateEnvs(requiredEnvs)...)
+	case "delete-all":
+		fmt.Println("Mode set to 'delete-all'.")
+		requiredEnvs := []string{"PR_NUMBER", "USER_LOGIN", "GITHUB_TOKEN"}
+		missingEnvs = append(missingEnvs, validateEnvs(requiredEnvs)...)
+	}
+
+	if len(missingEnvs) > 1 {
+		log.Fatalln(strings.Join(missingEnvs, "\n"))
+	}
+
 	prNumber := os.Getenv("PR_NUMBER")
-	if prNumber == "" {
-		log.Fatal("PR_NUMBER environment variable is required")
-	}
-
 	userLogin := os.Getenv("USER_LOGIN")
-	if userLogin == "" {
-		log.Fatal("USER_LOGIN environment variable is required")
-	}
-
 	githubToken := os.Getenv("GITHUB_TOKEN")
-	if githubToken == "" {
-		log.Fatal("GITHUB_TOKEN environment variable is required")
-	}
 
-	// template vars
 	title := os.Getenv("TITLE")
-	if title == "" && filepath.String() == "" {
+	if title == "" {
 		title = "# Preview Deployment"
 	}
 
 	url := os.Getenv("URL")
-	if url == "" && filepath.String() == "" {
-		log.Fatal("URL environment variable is required")
-	}
-
 	commitSha := os.Getenv("COMMIT_SHA")
-	if commitSha == "" && filepath.String() == "" {
-		log.Fatal("COMMIT_SHA environment variable is required")
-	}
 
 	assetsDir := os.Getenv("ASSETS_DIR")
-	debug := os.Getenv("DEBUG") == "true"
 
 	if debug {
 		log.Println("Debug mode enabled")
