@@ -124,7 +124,7 @@ func main() {
 		fmt.Println("Mode set to 'comment'.")
 		var requiredEnvs []string
 		if filepath.String() == "" {
-			requiredEnvs = []string{"PR_NUMBER", "USER_LOGIN", "GITHUB_TOKEN", "TITLE", "URL", "COMMIT_SHA"}
+			requiredEnvs = []string{"PR_NUMBER", "USER_LOGIN", "GITHUB_TOKEN", "URL", "COMMIT_SHA"}
 		} else {
 			requiredEnvs = []string{"PR_NUMBER", "USER_LOGIN", "GITHUB_TOKEN"}
 		}
