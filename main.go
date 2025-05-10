@@ -25,36 +25,58 @@ type NewComment struct {
 	Body string `json:"body"`
 }
 
-func main() {
-	flag.Parse()
-	args := flag.Args()
+type ModeFlag struct {
+	value string
+}
 
+func (m *ModeFlag) String() string {
+	return m.value
+}
+
+func (m *ModeFlag) Set(value string) error {
+	allowedModes := map[string]bool{
+		"comment":    true,
+		"delete-all": true,
+	}
+	if !allowedModes[value] {
+		return fmt.Errorf("invalid mode: %s; must be one of: comment, delete-all", value)
+	}
+	m.value = value
+	return nil
+}
+func main() {
 	showHelp := flag.Bool("help", false, "Show help message")
 	flag.BoolVar(showHelp, "h", false, "Show help message (shorthand)")
 
-	if len(args) < 1 {
+	var mode ModeFlag
+	flag.Var(&mode, "m", "Operation mode: comment or delete-all")
+	flag.Var(&mode, "mode", "Operation mode: comment or delete-all")
+
+	flag.Parse()
+	args := flag.Args()
+
+	if len(args) < 1 || *showHelp {
 		fmt.Println("Usage: go run main.go <repo>")
 		fmt.Println()
 		fmt.Println("Arguments:")
-		fmt.Println("  <repo>          The repository name in the format 'owner/repo'.")
+		fmt.Println("  -m, --mode <mode>  The mode of operation: comment or delete-all.")
+		fmt.Println("  <repo>             The repository name in the format 'owner/repo'.")
 		fmt.Println("Environment variables:")
-		fmt.Println("  PR_NUMBER       The pull request number to comment on.")
-		fmt.Println("  USER_LOGIN      The GitHub user login.")
-		fmt.Println("  COMMIT_SHA      The commit SHA.")
-		fmt.Println("  URL             The deployment URL.")
-		fmt.Println("  TITLE           The comment title. Default is '# Preview Deployment'.")
-		fmt.Println("  ASSETS_DIR      Where to look for static assets. Default is '/'.")
-		fmt.Println("  DEBUG           Set to 'true' to enable debug output. Default is 'false'.")
-		fmt.Println("  GITHUB_TOKEN    GitHub API token with repo permissions.")
-		os.Exit(1)
-	}
-
-	if *showHelp {
-		flag.Usage()
+		fmt.Println("  PR_NUMBER          The pull request number to comment on.")
+		fmt.Println("  USER_LOGIN         The GitHub user login.")
+		fmt.Println("  COMMIT_SHA         The commit SHA.")
+		fmt.Println("  URL                The deployment URL.")
+		fmt.Println("  TITLE              The comment title. Default is '# Preview Deployment'.")
+		fmt.Println("  ASSETS_DIR         Where to look for static assets. Default is '/'.")
+		fmt.Println("  DEBUG              Set to 'true' to enable debug output. Default is 'false'.")
+		fmt.Println("  GITHUB_TOKEN       GitHub API token with repo permissions.")
 		os.Exit(0)
 	}
-
 	repo := args[0]
+
+	if mode.String() == "" {
+		log.Fatal("Mode is required. Use -m or --mode to specify the mode.")
+	}
 
 	prNumber := os.Getenv("PR_NUMBER")
 	if prNumber == "" {
@@ -111,12 +133,21 @@ func main() {
 		log.Fatalf("Failed to get comments: %v", err)
 	}
 
+	fmt.Println("Deleting all comments...")
+
 	var commentURLs []string
 	for _, comment := range comments {
 		if strings.HasPrefix(comment.Body, title) && comment.User.Login == userLogin {
 			commentURLs = append(commentURLs, comment.URL)
 		}
 	}
+
+	if mode.String() == "delete-all" {
+		fmt.Println("Deleted all comments successfully.")
+		os.Exit(0)
+	}
+
+	fmt.Println("Creating new comment...")
 
 	commentBody, err := processTemplate(commentTemplatePath, map[string]string{
 		"TITLE":      title,
@@ -136,6 +167,8 @@ func main() {
 	if err := createComment(httpClient, repo, prNumber, commentBody, githubToken); err != nil {
 		log.Fatalf("Failed to create comment: %v", err)
 	}
+
+	fmt.Println("Comment created successfully.")
 }
 
 func getComments(client *http.Client, repo, prNumber, token string) ([]Comment, error) {
