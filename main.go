@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -82,6 +83,9 @@ func main() {
 	flag.Var(&filepath, "f", "Path to the static non-template file")
 	flag.Var(&filepath, "file", "Path to the static non-template file (shorthand)")
 
+	var urlIsTemplate bool
+	flag.BoolVar(&urlIsTemplate, "url-is-template", false, "URL is a template, e.g., https://pr{{PR_NUMBER}}.example.com")
+
 	flag.Parse()
 	args := flag.Args()
 
@@ -145,6 +149,22 @@ func main() {
 	}
 
 	url := os.Getenv("URL")
+
+	if urlIsTemplate {
+		urlTmpl, err := template.New("url").Parse(url)
+		if err != nil {
+			log.Fatalf("Failed to parse URL template: %v", err)
+		}
+		var buf bytes.Buffer
+		err = urlTmpl.Execute(&buf, map[string]string{
+			"PR_NUMBER": prNumber,
+		})
+		if err != nil {
+			log.Fatalf("Failed to execute URL template: %v", err)
+		}
+		url = buf.String()
+	}
+
 	commitSha := os.Getenv("COMMIT_SHA")
 
 	assetsDir := os.Getenv("ASSETS_DIR")
