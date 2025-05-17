@@ -7,7 +7,7 @@ ENV GO111MODULE=on \
 
 COPY . .
 
-RUN go mod tidy && go mod vendor && go build -o preview-bot
+RUN go mod tidy && go build -o preview-bot
 
 FROM scratch AS final
 
