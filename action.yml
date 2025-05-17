@@ -65,6 +65,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.token }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
         TITLE: ${{ inputs.title }}
+        URL: ${{ inputs.url }}
         USER_LOGIN: ${{ inputs.user-login }}
       name: Run preview-bot
       run: preview-bot --mode comment ${{ inputs.repository }}
