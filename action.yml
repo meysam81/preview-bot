@@ -1,0 +1,57 @@
+name: preview-bot
+description: Commenting the preview URLs to the GitHub Pull Request
+author: Meysam Azad <meysam@developer-friendly.blog>
+branding:
+  icon: edit-3
+  color: purple
+inputs:
+  token:
+    description: GitHub token
+    required: true
+    default: ${{ github.token }}
+  user-login:
+    description: GitHub user login (the author of the comment)
+    required: true
+    default: ${{ github.actor }}
+  debug:
+    description: Enable debug mode
+    required: false
+    default: "false"
+  title:
+    description: Title of the comment
+    required: false
+    default: "# Preview Deployment"
+  url:
+    description: URL of the preview deployment
+    required: true
+  repository:
+    description: Repository name
+    required: true
+    default: ${{ github.repository }}
+runs:
+  using: composite
+  steps:
+    - env:
+        GH_TOKEN: ${{ inputs.token }}
+        PREVIEW_BOT_REPOSITORY: ${{ github.action_repository }}
+      name: Install preview-bot binary
+      run: |
+        gh release download -p '*linux_amd64.tar.gz' -R "$PREVIEW_BOT_REPOSITORY" "${{ github.action_ref }}"
+        find . -maxdepth 1 -type f -name preview-bot_linux_amd64.tar.gz -exec tar -xvf {} \;
+        sudo mv preview-bot /usr/local/bin/
+      shell: bash
+      working-directory: /tmp
+    - name: Verify preview-bot binary
+      run: preview-bot --help
+      shell: bash
+    - env:
+        ASSETS_DIR: ${{ github.action_path }}
+        COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        DEBUG: ${{ contains(fromJson('["true", "1", "yes"]'), inputs.debug) }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        TITLE: ${{ inputs.title }}
+        USER_LOGIN: ${{ inputs.user-login }}
+      name: Run preview-bot
+      run: preview-bot --mode comment ${{ inputs.repository }}
+      shell: bash
