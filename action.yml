@@ -1,4 +1,4 @@
-name: preview-bot
+name: preview-bot-action
 description: Commenting the preview URLs to the GitHub Pull Request
 author: Meysam Azad <meysam@developer-friendly.blog>
 branding:
