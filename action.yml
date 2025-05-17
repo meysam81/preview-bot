@@ -53,8 +53,7 @@ runs:
         PREVIEW_BOT_REPOSITORY: ${{ github.action_repository }}
       name: Install preview-bot stable binary
       run: |
-        PREVIEW_BOT_REF="$(gh release list --jq .[0].tagName --json tagName -R $PREVIEW_BOT_REPOSITORY)"
-        gh release download -p '*linux_amd64.tar.gz' -R "$PREVIEW_BOT_REPOSITORY" "$PREVIEW_BOT_REF"
+        gh release download -p '*linux_amd64.tar.gz' -R "$PREVIEW_BOT_REPOSITORY"
         find . -maxdepth 1 -type f -name preview-bot_linux_amd64.tar.gz -exec tar -xvf {} \;
         sudo mv preview-bot /usr/local/bin/
       shell: bash
