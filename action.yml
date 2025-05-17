@@ -24,6 +24,10 @@ inputs:
   url:
     description: URL of the preview deployment
     required: true
+  url-is-template:
+    description: URL is a template
+    required: false
+    default: "false"
   repository:
     description: Repository name
     required: true
@@ -61,12 +65,15 @@ runs:
     - env:
         ASSETS_DIR: ${{ github.action_path }}
         COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
-        DEBUG: ${{ contains(fromJson('["true", "1", "yes"]'), inputs.debug) }}
+        DEBUG: ${{ contains(fromJson('["true", "1", "yes", "y"]'), inputs.debug) }}
         GITHUB_TOKEN: ${{ inputs.token }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
         TITLE: ${{ inputs.title }}
         URL: ${{ inputs.url }}
         USER_LOGIN: ${{ inputs.user-login }}
       name: Run preview-bot
-      run: preview-bot --mode comment ${{ inputs.repository }}
+      run: >-
+        preview-bot --mode comment
+        ${{ contains(fromJson('["true", "1", "yes", "y"]'), inputs.url-is-template) && '--url-template' }}
+        ${{ inputs.repository }}
       shell: bash
