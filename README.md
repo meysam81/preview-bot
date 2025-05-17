@@ -139,7 +139,7 @@ jobs:
 | `URL`          | Deployment preview URL                 | Required               |
 | `GITHUB_TOKEN` | GitHub API token with repo permissions | Required               |
 | `TITLE`        | Comment title                          | `# Preview Deployment` |
-| `ASSETS_DIR`   | Directory for template files           | `/`                    |
+| `ASSETS_DIR`   | Directory for template files           | `$PWD`                 |
 | `DEBUG`        | Enable debug logging                   | `false`                |
 
 ## Template
