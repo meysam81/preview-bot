@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"text/template"
 	"time"
@@ -103,7 +104,7 @@ func main() {
 		fmt.Println("")
 		fmt.Println("  DEBUG              Set to 'true' to enable debug output. Default is 'false'.")
 		fmt.Println("")
-		fmt.Println("  ASSETS_DIR         Where to look for static assets. Default is '/'.")
+		fmt.Println("  ASSETS_DIR         Where to look for static assets. Default is 'PWD'.")
 		fmt.Println("  COMMIT_SHA         The commit SHA.")
 		fmt.Println("  TITLE              The comment title. Default is '# Preview Deployment'.")
 		fmt.Println("  URL                The deployment URL.")
@@ -168,6 +169,13 @@ func main() {
 	commitSha := os.Getenv("COMMIT_SHA")
 
 	assetsDir := os.Getenv("ASSETS_DIR")
+	if assetsDir == "" {
+		var err error
+		assetsDir, err = os.Getwd()
+		if err != nil {
+			log.Fatalf("Failed to get current working directory: %v", err)
+		}
+	}
 
 	if debug {
 		log.Println("Debug mode enabled")
@@ -213,7 +221,7 @@ func main() {
 
 	var commentBody string
 	if filepath.String() == "" {
-		commentTemplatePath := assetsDir + "/preview-body.md.tpl"
+		commentTemplatePath := path.Join(assetsDir, "preview-body.md.tpl")
 		commentBody, err = processTemplate(commentTemplatePath, map[string]string{
 			"TITLE":      title,
 			"COMMIT_SHA": commitSha,
