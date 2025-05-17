@@ -84,7 +84,7 @@ func main() {
 	flag.Var(&filepath, "file", "Path to the static non-template file (shorthand)")
 
 	var urlIsTemplate bool
-	flag.BoolVar(&urlIsTemplate, "url-is-template", false, "URL is a template, e.g., https://pr{{PR_NUMBER}}.example.com")
+	flag.BoolVar(&urlIsTemplate, "url-is-template", false, "URL is a template, e.g., https://pr{{.PR_NUMBER}}.example.com")
 
 	flag.Parse()
 	args := flag.Args()
