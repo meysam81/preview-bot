@@ -104,6 +104,31 @@ spec:
       restartPolicy: OnFailure
 ```
 
+## GitHub Actions
+
+```yaml
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - main
+
+
+jobs:
+  comment-pr:
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment PR
+        uses: meysam81/preview-bot@v1.5.2
+        with:
+          url: https://pr{{.PR_NUMBER}}.example.com
+          url-is-template: true
+```
+
 ## Environment Variables
 
 | Variable       | Description                            | Default                |
