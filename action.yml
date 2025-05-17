@@ -12,7 +12,7 @@ inputs:
   user-login:
     description: GitHub user login (the author of the comment)
     required: true
-    default: ${{ github.actor }}
+    default: github-actions[bot]
   debug:
     description: Enable debug mode
     required: false
