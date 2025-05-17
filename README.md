@@ -123,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Comment PR
-        uses: meysam81/preview-bot@v1.5.2
+        uses: meysam81/preview-bot@v1.5.3
         with:
           url: https://pr{{.PR_NUMBER}}.example.com
           url-is-template: true
