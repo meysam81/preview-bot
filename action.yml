@@ -74,6 +74,6 @@ runs:
       name: Run preview-bot
       run: >-
         preview-bot --mode comment
-        ${{ contains(fromJson('["true", "1", "yes", "y"]'), inputs.url-is-template) && '--url-template' }}
+        ${{ contains(fromJson('["true", "1", "yes", "y"]'), inputs.url-is-template) && '--url-is-template' }}
         ${{ inputs.repository }}
       shell: bash
