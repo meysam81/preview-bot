@@ -31,12 +31,25 @@ inputs:
 runs:
   using: composite
   steps:
-    - env:
+    - if: github.action_ref != 'main'
+      env:
         GH_TOKEN: ${{ inputs.token }}
         PREVIEW_BOT_REPOSITORY: ${{ github.action_repository }}
         PREVIEW_BOT_REF: ${{ github.action_ref }}
       name: Install preview-bot binary
       run: |
+        gh release download -p '*linux_amd64.tar.gz' -R "$PREVIEW_BOT_REPOSITORY" "$PREVIEW_BOT_REF"
+        find . -maxdepth 1 -type f -name preview-bot_linux_amd64.tar.gz -exec tar -xvf {} \;
+        sudo mv preview-bot /usr/local/bin/
+      shell: bash
+      working-directory: /tmp
+    - if: github.action_ref == 'main'
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        PREVIEW_BOT_REPOSITORY: ${{ github.action_repository }}
+      name: Install preview-bot binary
+      run: |
+        PREVIEW_BOT_REF="$(gh release list --jq .[0].tagName --json tagName)"
         gh release download -p '*linux_amd64.tar.gz' -R "$PREVIEW_BOT_REPOSITORY" "$PREVIEW_BOT_REF"
         find . -maxdepth 1 -type f -name preview-bot_linux_amd64.tar.gz -exec tar -xvf {} \;
         sudo mv preview-bot /usr/local/bin/
