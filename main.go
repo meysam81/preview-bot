@@ -90,8 +90,9 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	if len(args) < 1 || *showHelp {
-		fmt.Println("Usage: go run main.go <repo>")
+	binName := os.Args[0]
+	if *showHelp {
+		fmt.Printf("Usage: %s <repo>\n", binName)
 		fmt.Println()
 		fmt.Println("Arguments:")
 		fmt.Println("  -m, --mode <mode>  The mode of operation: comment or delete-all.")
@@ -110,7 +111,13 @@ func main() {
 		fmt.Println("  URL                The deployment URL.")
 		os.Exit(0)
 	}
-	repo := args[0]
+	var repo string
+	if len(args) == 1 {
+		repo = args[0]
+	} else if os.Getenv("REPOSITORY") != "" {
+		repo = os.Getenv("REPOSITORY")
+	}
+
 	debug := os.Getenv("DEBUG") == "true"
 
 	if mode.String() == "" {
@@ -134,6 +141,10 @@ func main() {
 		fmt.Println("Mode set to 'delete-all'.")
 		requiredEnvs := []string{"PR_NUMBER", "USER_LOGIN", "GITHUB_TOKEN"}
 		missingEnvs = append(missingEnvs, validateEnvs(requiredEnvs)...)
+	}
+
+	if repo == "" {
+		missingEnvs = append(missingEnvs, "REPOSITORY environment variable or <owner/repo> positional argument is required")
 	}
 
 	if len(missingEnvs) > 1 {
